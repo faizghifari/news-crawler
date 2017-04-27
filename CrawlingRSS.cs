@@ -114,23 +114,25 @@ namespace RSSCrawler
                 }
                 else
                 {
-                    int lo = last[text[i]];
-                    i = i + m - Math.Min(j, 1 + lo);
-                    j = m - 1;
+                    try {
+                        int lo = last[text[i]];
+                        i = i + m - Math.Min(j, 1 + lo);
+                        j = m - 1;
+                    }
+                    catch (Exception exp)
+                    {
+                        return -1;
+                    }
                 }
             } while (i <= n - 1);
 
             return -1;
         }
 
-        public static void regexMatch(string text, string expr)
+        public static int regexMatch(string text, string expr)
         {
-            Console.WriteLine("Expression : {0}", expr);
             MatchCollection mc = Regex.Matches(text, expr);
-            foreach (Match m in mc)
-            {
-                Console.WriteLine(m);
-            }
+            return mc.Count > 0 ? mc.Count : -1;
         }
     }
 
@@ -142,7 +144,7 @@ namespace RSSCrawler
 
         public void DataExtend(Article[] xmlDocTemp)
         {
-            for(int i = count; i<count+xmlDocTemp.Length; i++)
+            for (int i = count; i < count + xmlDocTemp.Length; i++)
             {
                 xmlDoc[i] = new Article();
                 xmlDoc[i].Title = xmlDocTemp[i - count].Title;
@@ -186,7 +188,6 @@ namespace RSSCrawler
             foreach (XmlNode rssNode in rssNodeList)
             {
                 XmlNode rssSubNode;
-                //rssContent[idx].ID = idx;
                 rssSubNode = rssNode.SelectSingleNode("title");
                 rssContent[idx].Title = rssSubNode != null ? rssSubNode.InnerText : "";
 
@@ -200,31 +201,24 @@ namespace RSSCrawler
                     rssSubNode = rssNode.SelectSingleNode("description");
                     rssContent[idx].Summary = rssSubNode != null ? rssSubNode.InnerText : "";
                 }
-                /*else if (link.Equals("http://www.antaranews.com/rss/terkini"))
-                {
-                    rssSubNode = rssNode.SelectSingleNode("description");
-                    string image = Regex.Replace(rssSubNode.InnerText, @"&lt;img src=", "");
-                    image = Regex.Replace(image, @" align(.*?)...", "");
-                    image = image.Replace("&apos;", "");
-                    rssContent[idx].Image = image;
-                    string desc = Regex.Replace(rssSubNode.InnerText, @"&lt;(.*?)&gt;", "");
-                    rssContent[idx].Summary = rssSubNode != null ? desc : "";
-                }*/
                 else
                 {
                     rssSubNode = rssNode.SelectSingleNode("description");
                     var Htmldoc = new HtmlDocument();
                     Htmldoc.LoadHtml(rssSubNode.InnerText);
                     HtmlNodeCollection nodes = Htmldoc.DocumentNode.SelectNodes("//img");
-                    foreach (HtmlNode nodeTemp in nodes)
+                    if (nodes != null)
                     {
-                        rssContent[idx].Image = nodeTemp != null ? nodeTemp.Attributes["src"].Value : "";
-                        break;
+                        foreach (HtmlNode nodeTemp in nodes)
+                        {
+                            rssContent[idx].Image = nodeTemp != null ? nodeTemp.Attributes["src"].Value : "";
+                            break;
+                        }
                     }
                     string desc = Regex.Replace(rssSubNode.InnerText, @"<img(.*?)>", "");
                     rssContent[idx].Summary = rssSubNode != null ? desc : "";
                 }
-                    
+
                 rssSubNode = rssNode.SelectSingleNode("pubDate");
                 string dateString = rssSubNode != null ? rssSubNode.InnerText : "";
                 rssContent[idx].ReleaseDate = DateTime.ParseExact(dateString, parseFormat, CultureInfo.InvariantCulture);
@@ -275,7 +269,7 @@ namespace RSSCrawler
                 }
                 idx++;
             }
-            tempCount += idx+1;
+            tempCount += idx + 1;
 
             // Return the string that contain the RSS items
             return rssContent;
@@ -287,8 +281,8 @@ namespace RSSCrawler
             Article[] temp2 = ParseRssFile("http://tempo.co/rss/terkini");
             Article[] temp3 = ParseRssFile("http://rss.vivanews.com/get/all");
             Article[] temp4 = ParseRssFile("http://www.antaranews.com/rss/terkini");
-            
-            xmlDoc = new Article[tempCount+1];
+
+            xmlDoc = new Article[tempCount + 1];
             if (temp1 != null) DataExtend(temp1);
             if (temp2 != null) DataExtend(temp2);
             if (temp3 != null) DataExtend(temp3);
@@ -296,45 +290,132 @@ namespace RSSCrawler
         }
     }
 
-    class Program
+    public class NewsAggregator
     {
-        static void Main(string[] args)
+        public CrawlingRSS RSSArticle;
+
+        public NewsAggregator()
         {
-            CrawlingRSS RSS = new CrawlingRSS();
-            for (int j=0; j<RSS.count; j++)
-            {
-                StringMatchingAlgorithm.printArticle(RSS.xmlDoc[j]);
-            }
-            Console.WriteLine("Crawling Done");
-            Console.Write("Pattern : ");
-            string pattern = Console.ReadLine();
+            RSSArticle = new CrawlingRSS();
+        }
+
+        public void KMPSearch(string pattern)
+        {
             int i = -1;
             int idx = 0;
-            while (i < RSS.count-1 )
+            while (i < RSSArticle.count - 1)
             {
                 i++;
-                if (RSS.xmlDoc[i].Title != null && StringMatchingAlgorithm.KMPMatch(RSS.xmlDoc[i].Title, pattern) != -1)
+                if (RSSArticle.xmlDoc[i].Title != null && StringMatchingAlgorithm.KMPMatch(RSSArticle.xmlDoc[i].Title, pattern) != -1)
                 {
                     idx++;
                     Console.Write(idx + " . ");
-                    StringMatchingAlgorithm.printArticle(RSS.xmlDoc[i]);
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
                 }
-                else if (RSS.xmlDoc[i].Summary != null && StringMatchingAlgorithm.KMPMatch(RSS.xmlDoc[i].Summary, pattern) != -1)
+                else if (RSSArticle.xmlDoc[i].Summary != null && StringMatchingAlgorithm.KMPMatch(RSSArticle.xmlDoc[i].Summary, pattern) != -1)
                 {
                     idx++;
                     Console.Write(idx + " . ");
-                    StringMatchingAlgorithm.printArticle(RSS.xmlDoc[i]);
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
                 }
-                else if (RSS.xmlDoc[i].Content != null && StringMatchingAlgorithm.KMPMatch(RSS.xmlDoc[i].Content, pattern) != -1)
+                else if (RSSArticle.xmlDoc[i].Content != null && StringMatchingAlgorithm.KMPMatch(RSSArticle.xmlDoc[i].Content, pattern) != -1)
                 {
                     idx++;
                     Console.Write(idx + " . ");
-                    StringMatchingAlgorithm.printArticle(RSS.xmlDoc[i]);
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
                 }
             }
+        }
 
-            double a;
-            a = Console.Read();
+        public void BMSearch(string pattern)
+        {
+            int i = -1;
+            int idx = 0;
+            while (i < RSSArticle.count - 1)
+            {
+                i++;
+                if (RSSArticle.xmlDoc[i].Title != null && StringMatchingAlgorithm.BMMatch(RSSArticle.xmlDoc[i].Title, pattern) != -1)
+                {
+                    idx++;
+                    Console.Write(idx + " . ");
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
+                }
+                else if (RSSArticle.xmlDoc[i].Summary != null && StringMatchingAlgorithm.BMMatch(RSSArticle.xmlDoc[i].Summary, pattern) != -1)
+                {
+                    idx++;
+                    Console.Write(idx + " . ");
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
+                }
+                else if (RSSArticle.xmlDoc[i].Content != null && StringMatchingAlgorithm.BMMatch(RSSArticle.xmlDoc[i].Content, pattern) != -1)
+                {
+                    idx++;
+                    Console.Write(idx + " . ");
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
+                }
+            }
+        }
+
+        public void regexSearch(string pattern)
+        {
+            int i = -1;
+            int idx = 0;
+            while (i < RSSArticle.count - 1)
+            {
+                i++;
+                if (RSSArticle.xmlDoc[i].Title != null && StringMatchingAlgorithm.regexMatch(RSSArticle.xmlDoc[i].Title, pattern) != -1)
+                {
+                    idx++;
+                    Console.Write(idx + " . ");
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
+                }
+                else if (RSSArticle.xmlDoc[i].Summary != null && StringMatchingAlgorithm.regexMatch(RSSArticle.xmlDoc[i].Summary, pattern) != -1)
+                {
+                    idx++;
+                    Console.Write(idx + " . ");
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
+                }
+                else if (RSSArticle.xmlDoc[i].Content != null && StringMatchingAlgorithm.regexMatch(RSSArticle.xmlDoc[i].Content, pattern) != -1)
+                {
+                    idx++;
+                    Console.Write(idx + " . ");
+                    StringMatchingAlgorithm.printArticle(RSSArticle.xmlDoc[i]);
+                }
+            }
+        }
+
+        static void Main(string[] args)
+        {
+            NewsAggregator RAF = new NewsAggregator();
+            Console.WriteLine("Crawling Done");
+            for(int i=0; i < RAF.RSSArticle.count; i++)
+            {
+                StringMatchingAlgorithm.printArticle(RAF.RSSArticle.xmlDoc[i]);
+            }
+            Console.Write("Pilihan : ");
+            int pil = Convert.ToInt32(Console.ReadLine());
+            while (pil != 4)
+            {
+                Console.WriteLine("Pattern : ");
+                string pattern = Console.ReadLine();
+                Console.WriteLine(pil);
+                Console.WriteLine(pattern);
+                if (pil == 1)
+                {
+                    RAF.KMPSearch(pattern);
+                }
+                else if (pil == 2)
+                {
+                    RAF.BMSearch(pattern);
+                }
+                else if (pil == 3)
+                {
+                    RAF.regexSearch(pattern);
+                }
+
+                Console.WriteLine();
+                Console.Write("Pilihan : ");
+                pil = Convert.ToInt32(Console.ReadLine());
+            }
         }
     }
 }
