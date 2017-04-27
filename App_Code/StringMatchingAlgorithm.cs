@@ -9,13 +9,6 @@ using System.Web;
 /// </summary>
 public class StringMatchingAlgorithm
 {
-    public StringMatchingAlgorithm()
-    {
-        //
-        // TODO: Add constructor logic here
-        //
-    }
-
     public static int[] computeFail(string pattern)
     {
         int[] fail = new int[pattern.Length];
