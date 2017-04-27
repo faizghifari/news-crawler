@@ -55,8 +55,8 @@ public class StringMatchingAlgorithm
 
     public static int[] buildLast(string pattern)
     {
-        int[] last = new int[128];
-        for (int i = 0; i < 128; i++) { last[i] = -1; }
+        int[] last = new int[256];
+        for (int i = 0; i < 256; i++) { last[i] = -1; }
         for (int i = 0; i < pattern.Length; i++) { last[pattern[i]] = i; }
         return last;
     }
@@ -66,7 +66,22 @@ public class StringMatchingAlgorithm
         int[] last = buildLast(pattern);
         int n = text.Length;
         int m = pattern.Length;
-        int i = m - 1;
+        int skip;
+        for (int i = 0; i <= n-m; i += skip)
+        {
+            skip = 0;
+            for (int j = m-1; j >= 0; j--)
+            {
+                if (pattern[j] != text[i+j])
+                {
+                    skip = Math.Max(1, j - last[text[i + j]]);
+                    break;
+                }
+            }
+            if (skip == 0) return i;
+        }
+        return n;
+        /*int i = m - 1;
 
         if (i > n - 1) { return -1; }
 
@@ -86,7 +101,7 @@ public class StringMatchingAlgorithm
             }
         } while (i <= n - 1);
 
-        return -1;
+        return -1;*/
     }
 
     public static void regexMatch(string text, string expr)
@@ -109,8 +124,8 @@ public class StringMatchingAlgorithm
             Console.WriteLine("Text : {0}", text);
             Console.WriteLine("Pattern : {0}", pattern);
 
-            regexMatch(text, pattern);
-            /* int posn = KMPMatch(text, pattern);
+            // regexMatch(text, pattern);
+             int posn = BMMatch(text, pattern);
             if (posn == -1)
             {
                 Console.WriteLine("Pattern not found");
@@ -118,7 +133,7 @@ public class StringMatchingAlgorithm
             else
             {
                 Console.WriteLine("Pattern starts at position {0}", posn);
-            }*/
+            }
         }
     }
 }
